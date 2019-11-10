@@ -1,4 +1,4 @@
-package com.cn.ytb.index;
+package com.cn.red.point;
 
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
