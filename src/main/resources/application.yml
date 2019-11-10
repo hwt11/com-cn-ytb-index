@@ -1,0 +1,71 @@
+server:
+  port: 9094
+
+spring:
+  application:
+    name: zytrade-sevice-mobile    #指定应用的名称建议使用小写
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://192.168.3.35:3306/red-point?useUnicode=yes&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true&useSSL=false&allowPublicKeyRetrieval=true
+#    url: jdbc:mysql://rm-uf6su1o76l7n3kvl9.mysql.rds.aliyuncs.com:3306/red-point?useUnicode=yes&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 685541877
+#    password: suD711UP
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    initialSize: 1
+    minIdle: 3
+    maxActive: 300
+    maxWait: 60000
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 30000
+    testWhileIdle: false
+    testOnBorrow: false
+    testOnReturn: false
+    poolPreparedStatements: true
+    maxPoolPreparedStatementPerConnectionSize: 20
+    filters: stat,wall,slf4j
+    connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    useGlobalDataSourceStat: truea
+  redis:
+    database: 0
+    host: 192.168.3.35
+#    host: r-uf60se8w67gki7zt5m.redis.rds.aliyuncs.com
+    port: 6379
+    password:
+#    password: suD711UP
+#    jedis:
+#      pool:
+#        max-active: 2000
+#        max-idle: 100
+#        min-idle: 10
+#        max-wait: -1
+#    timeout: 10000
+#    cluster:
+#      nodes: newcoin-0001-001.pkppxv.0001.apne1.cache.amazonaws.com:6379,newcoin-0001-002.pkppxv.0001.apne1.cache.amazonaws.com:6379
+  rabbitmq:
+    host: 192.168.3.35
+#    host: 172.19.248.219
+#    username: admin
+#    password: admin
+    username: yinweixx
+    password: 685541877
+    #    支持发布确认
+    publisher-confirms: true
+    #    支持发布返回
+    publisher-returns: true
+    listener:
+      simple:
+        #      采用手动应答
+        acknowledge-mode: manual
+        #        当前监听容器数
+        concurrency: 1
+        #        最大数
+        max-concurrency: 10
+        #        是否支持重试
+        retry:
+          enabled: true
+
+
+mybatis:
+  mapper-locations: classpath:mapping/*.xml
+  type-aliases-package: com.cn.red.point.o2c

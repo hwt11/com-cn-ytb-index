@@ -1,0 +1,979 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cn.red.point.o2c.mapper.IndexMapper">
+    <select id="queryUserAliPay" parameterType="int" resultType="map">
+        SELECT
+        nick_name as `name`,
+        alipay_account as payno,
+        head_img as image,
+        FROM
+        ytb_user
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="queryOrderCount" parameterType="int" resultType="int">
+        SELECT
+        count(id)
+        FROM
+        red_point_o2c
+        WHERE
+        userid = #{id}
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+    </select>
+
+    <select id="queryOrders" resultType="map">
+        SELECT
+        id,
+        price,
+        `count`,
+        IFNULL(nick,'SuperMan') AS nick,
+        IFNULL(image,'') AS image,
+        userid as userId
+        FROM
+        red_point_o2c
+        where
+        status in (0,5)
+        <if test="search != null and search != ''">
+            AND userid = #{search}
+        </if>
+        and `type` = #{boo}
+        ORDER BY
+        ${sort} ASC
+        LIMIT #{page},20
+    </select>
+
+    <select id="queryOrders_DESC" resultType="map">
+        SELECT
+        id,
+        price,
+        `count`,
+        IFNULL(nick,'SuperMan') AS nick,
+        IFNULL(image,'') AS image,
+        userid as userId
+        FROM
+        red_point_o2c
+        where
+        status in (0,5)
+        <if test="search != null and search != ''">
+            AND userid = #{search}
+        </if>
+        and `type` = #{boo}
+        ORDER BY
+        ${sort} DESC
+        LIMIT #{page},20
+    </select>
+
+    <insert id="insertOrder" parameterType="map">
+        INSERT
+        INTO
+        red_point_o2c
+        (
+        userid,
+        price,
+        `count`,
+        num,
+        signtime,
+        status,
+        nick,
+        image,
+        `type`
+        )
+        VALUES
+        (
+        #{userId},
+        #{price},
+        #{count},
+        #{count},
+        now(),
+        0,
+        #{nick},
+        #{image},
+        #{type}
+        )
+    </insert>
+
+    <select id="queryUserMoney" parameterType="int" resultType="com.cn.red.point.o2c.common.UserMoney">
+        SELECT
+        ytl_money,
+        cold_ytl
+        FROM
+        ytb_user
+        WHERE
+        user_id = #{userId}
+        FOR UPDATE
+    </select>
+
+    <select id="queryOrder" parameterType="String" resultType="map">
+        SELECT
+        userid,
+        price,
+        `count`
+        FROM
+        red_point_o2c
+        WHERE
+        id = #{orderId}
+        AND
+        `type` = 0
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+        FOR UPDATE
+    </select>
+
+    <select id="querySellOrder" parameterType="String" resultType="map">
+        SELECT
+        nick,
+        image,
+        userid,
+        price,
+        `count`
+        FROM
+        red_point_o2c
+        WHERE
+        id = #{orderId}
+        AND
+        `type` = 1
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+        FOR UPDATE
+    </select>
+
+    <update id="updateUserZLMoney" parameterType="map">
+        UPDATE
+        ytb_user
+        SET
+        ytl_money = #{zlmoney},
+        cold_ytl = #{coldzlmoney}
+        WHERE
+        user_id = #{userId}
+    </update>
+
+    <insert id="insertOrderLog" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT
+        INTO
+        red_point_o2c_log
+        (
+        orderid,
+        userid,
+        enemyid,
+        price,
+        signtime,
+        num,
+        status,
+        enemynick,
+        enemyimage,
+        enemyalipay,
+        enemypayimage,
+        enemyname,
+        `type`
+        )
+        VALUES
+        (
+        #{orderId},
+        #{userId},
+        #{enemyId},
+        #{price},
+        now(),
+        #{num},
+        #{status},
+        #{enemynick},
+        #{enemyimage},
+        #{enemyalipay},
+        #{enemypayimage},
+        #{enemyname},
+        #{type}
+        )
+    </insert>
+
+    <update id="updateOrder" parameterType="map">
+        UPDATE
+        red_point_o2c
+        SET
+        `count` = #{count},
+        status = #{status},
+        endtime = #{endtime}
+        WHERE
+        id = #{orderId}
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+    </update>
+
+    <select id="queryOrderFromMQ" parameterType="String" resultType="map">
+        SELECT
+        id,
+        userid,
+        orderid,
+        enemyid,
+        num
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{id}
+        AND
+        status = 10
+        FOR UPDATE
+    </select>
+
+    <select id="queryOrderFromMQ_Sell" parameterType="String" resultType="map">
+        SELECT
+        id,
+        userid,
+        orderid,
+        enemyid,
+        num
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{id}
+        AND
+        status = 100
+        FOR UPDATE
+    </select>
+
+    <select id="queryUserOrder" parameterType="map" resultType="map">
+        SELECT
+        id,
+        userid,
+        price,
+        `count`,
+        status
+        FROM
+        red_point_o2c
+        WHERE
+        id = #{orderId}
+        AND
+        userid = #{userId}
+        AND
+        `type` = 0
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+        FOR UPDATE
+    </select>
+
+    <select id="queryUserSellOrder" parameterType="map" resultType="map">
+        SELECT
+        id,
+        userid,
+        price,
+        `count`,
+        status
+        FROM
+        red_point_o2c
+        WHERE
+        id = #{orderId}
+        AND
+        userid = #{userId}
+        AND
+        `type` = 1
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+        FOR UPDATE
+    </select>
+
+    <update id="cancelUserOrder" parameterType="map">
+        UPDATE
+        red_point_o2c
+        SET
+        status = #{status}
+        WHERE
+        id = #{orderId}
+    </update>
+
+    <select id="queryOrderFromMQ15" parameterType="String" resultType="map">
+        SELECT
+        id,
+        userid,
+        orderid,
+        enemyid,
+        num,
+        price
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{id}
+        AND
+        status = 15
+        FOR UPDATE
+    </select>
+
+    <select id="queryOrderFromMQ150" parameterType="String" resultType="map">
+        SELECT
+        id,
+        userid,
+        orderid,
+        enemyid,
+        num,
+        price
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{id}
+        AND
+        status = 150
+        FOR UPDATE
+    </select>
+
+    <update id="cancelOrderLog" parameterType="String">
+        UPDATE
+        red_point_o2c_log
+        SET
+        status = #{status}
+        WHERE
+        id = #{id}
+        AND
+        status = 10
+    </update>
+
+    <update id="cancelOrder" parameterType="String">
+        UPDATE
+        red_point_o2c
+        SET
+        status = 40
+        WHERE
+        id = #{orderId}
+        AND
+        (
+        status = 0
+        OR
+        status = 5
+        )
+    </update>
+
+    <select id="queryOrderByUser" parameterType="map" resultType="map">
+        SELECT
+        id,
+        enemyid
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{orderId}
+        AND
+        userid = #{userId}
+        AND
+        status = 10
+        AND
+        `type` = 0
+        FOR UPDATE
+    </select>
+
+    <update id="updateUserOrder" parameterType="map">
+        UPDATE
+        red_point_o2c
+        SET
+        `count` = `count` + #{num}
+        WHERE
+        id = #{orderId}
+    </update>
+
+    <select id="querySellOrderByUser" parameterType="map" resultType="map">
+        SELECT
+        id,
+        enemyid
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{orderId}
+        AND
+        enemyid = #{userId}
+        AND
+        status = 100
+        AND
+        `type` = 1
+        FOR UPDATE
+    </select>
+
+    <update id="updateOrderStatus" parameterType="map">
+        UPDATE
+        red_point_o2c_log
+        SET
+        payreturn = #{payreturn},
+        endtime = now(),
+        status = 15,
+        userpaynum = #{userPayNum}
+        WHERE
+        id = #{orderId}
+        AND
+        status = 10
+    </update>
+
+    <update id="updateSellOrderStatus" parameterType="map">
+        UPDATE
+        red_point_o2c_log
+        SET
+        payreturn = #{payreturn},
+        endtime = now(),
+        status = 150,
+        userpaynum = #{userPayNum}
+        WHERE
+        id = #{orderId}
+        AND
+        status = 100
+    </update>
+
+    <select id="queryPhone" parameterType="String" resultType="String">
+        SELECT
+        phone
+        FROM
+        red_point_o2c_alipay
+        WHERE
+        userid = #{enemyid}
+    </select>
+
+    <update id="updateOrderStatusEND" parameterType="map">
+        UPDATE
+        red_point_o2c_log
+        SET
+        status = #{status},
+        endtime = now()
+        WHERE
+        id = #{id}
+        AND
+        status = #{old}
+    </update>
+
+    <select id="queryOrderByEnemy" parameterType="map" resultType="map">
+        SELECT
+        id,
+        userid,
+        orderid,
+        enemyid,
+        price,
+        num
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{orderId}
+        AND
+        enemyid = #{enemyId}
+        AND
+        status = 15
+        FOR UPDATE
+    </select>
+
+    <select id="querySellOrderByEnemy" parameterType="map" resultType="map">
+        SELECT
+        id,
+        userid,
+        orderid,
+        enemyid,
+        price,
+        num
+        FROM
+        red_point_o2c_log
+        WHERE
+        id = #{orderId}
+        AND
+        userid = #{enemyId}
+        AND
+        status = 150
+        FOR UPDATE
+    </select>
+
+    <insert id="insertAliPay" parameterType="map">
+        INSERT
+        INTO
+        red_point_o2c_alipay
+        (
+        userid,
+        `name`,
+        payno,
+        image,
+        signtime,
+        phone,
+        password
+        )
+        VALUES
+        (
+        #{userId},
+        #{name},
+        #{payno},
+        #{image},
+        now(),
+        #{phone},
+        #{password}
+        )
+    </insert>
+
+    <select id="findO2cByUserId" resultType="map">
+        select
+        id as orderId,
+        userid,
+        price,
+        count,
+        num,
+        signtime,
+        status,
+        nick,
+        image
+        from
+        red_point_o2c
+        where
+        userid = #{userId}
+        and status in (0,5)
+        and `type` = #{boo}
+        order by  id desc
+        limit #{pageNum},10
+    </select>
+
+    <select id="findO2cByUserIdSell" resultType="map">
+        SELECT
+        id as logId,
+        orderId ,
+        log.userid as userid ,
+        log.enemyid  as enemyid,
+        log.signtime  as signtime,
+        log.price as price ,
+        log.num as num ,
+        log.status as `status`
+        FROM
+        red_point_o2c_log log
+        where
+        enemyid = #{userId}
+        and
+        log.status not in (12,19,20,17,120,190,200,120)
+        and `type` = #{boo}
+        order  by log.id desc
+        limit #{pageNum},10
+    </select>
+
+    <select id="findO2cByUserIdFinish" resultType="map" >
+         select
+         id as orderId,
+        userid,
+        price,
+        count,
+        num,
+        signtime,
+        status,
+        IFNULL(nick,'') as nick,
+        IFNULL(image,'') as image
+        from
+        red_point_o2c
+        where
+        userid = #{userId}
+        and status not in (0,5)
+        and `type` = #{boo}
+        order by  id desc
+        limit #{pageNum},10
+    </select>
+
+    <select id="findO2cByUserIdFinishSell" resultType="map">
+        SELECT
+        id as logId,
+        orderId ,
+        log.userid as userid ,
+        log.enemyid  as enemyid,
+        log.signtime  as signtime,
+        log.price as price ,
+        log.num as num,
+        log.status as `status`
+        FROM
+        red_point_o2c_log log
+        where
+        enemyid = #{userId}
+        and
+        log.status in (12,19,20,17,120,190,200,170)
+        and `type` = #{boo}
+        order  by log.id desc
+        limit #{pageNum},10
+    </select>
+
+    <select id="O2cBuyDetails" resultType="map">
+        SELECT
+         o2c.id as id,
+         userid,
+         o2c.status as status,
+         o2c.price as price,
+         o2c.num as num,
+         o2c.signtime as signtime
+        FROM red_point_o2c o2c
+        where o2c.id = #{orderId}
+        and userid = #{userId}
+        order by o2c.id desc
+    </select>
+
+    <select id="O2cBuyDetailsLog" resultType="map" >
+        SELECT
+            IFNULL(enemynick,'') as nick,
+            IFNULL(enemyimage,'') as image,
+            log.signtime as signtime,
+            log.`status` as status,
+            IFNULL(log.num,'') as num,
+            log.id as logId
+            FROM red_point_o2c_log log
+            where log.userid = #{userId}
+            and log.orderid = #{orderId}
+            order by log.id desc
+            limit #{page},10
+    </select>
+
+    <select id="O2cBuyDetailsLog_SELL" resultType="map" >
+        SELECT
+            IFNULL(enemynick,'') as nick,
+            IFNULL(enemyimage,'') as image,
+            log.signtime as signtime,
+            log.`status` as status,
+            IFNULL(log.num,'') as num,
+            log.id as logId
+            FROM red_point_o2c_log log
+            where log.userid = #{userId}
+            and log.orderid = #{orderId}
+            order by log.id desc
+            limit #{page},10
+    </select>
+
+    <select id="orderBuystayLog" resultType="map" >
+        SELECT
+            id as logId,
+            IFNULL(enemynick,'') as nick,
+            IFNULL(enemyimage,'') as image,
+            log.signtime as signtime,
+            log.`status` as status,
+            IFNULL(log.num,'') as num,
+            log.orderid as orderId,
+            log.price as price,
+            `type`
+            FROM red_point_o2c_log log
+            where log.userid = #{userId}
+            and log.status not in (12,19,20,17,120,190,200,170)
+            order by log.id desc
+            limit #{page},10
+    </select>
+
+    <select id="O2cBuyDetailsMsg" resultType="map">
+        SELECT
+        IFNULL(enemynick,'') as nick,
+        IFNULL(enemyimage,'') as image,
+        log.signtime as signtime,
+        log.`status` as status,
+        log.id as logId,
+        log.num as num,
+        log.price as price,
+        enemyalipay as payno,
+        enemyname as name ,
+        enemypayimage as payImage
+        FROM red_point_o2c_log log
+        where log.userid = #{userId}
+        and log.id = #{logId}
+        and `type` = #{boo}
+    </select>
+
+    <select id="O2cBuyDetailsMsg_SELL" resultType="map">
+        SELECT
+        IFNULL(enemynick,'') as nick,
+        IFNULL(enemyimage,'') as image,
+        log.signtime as signtime,
+        log.`status` as status,
+        log.id as logId,
+        log.num as num,
+        log.price as price,
+        enemyalipay as payno,
+        enemyname as name ,
+        enemypayimage as payImage
+        FROM red_point_o2c_log log
+        where log.enemyid = #{userId}
+        and log.id = #{logId}
+        and `type` = #{boo}
+    </select>
+
+    <select id="yesDayCaverage" resultType="map">
+        SELECT
+        IFNULL(MAX(o2c.price),0.00) as caverageMaxPrice,
+        IFNULL(MIN(o2c.price),0.00) as caverageMinPrice,
+        (IFNULL(MAX(o2c.price),0.00) + IFNULL(MIN(o2c.price),0.00)) / 2 as caveragePrice,
+        IFNULL(sum(log.num),0.00) as caverageNum
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN red_point_o2c o2c ON o2c.id = log.orderid
+        WHERE
+        TO_DAYS(NOW()) - TO_DAYS(log.signtime) &lt;= 1
+        and log.`status` in (19,20,190,200)
+    </select>
+
+    <select id="nowCaverage" resultType="map" >
+        SELECT
+        IFNULL(MAX(o2c.price),0.00) as toDayMaxPrice,
+        IFNULL(MIN(o2c.price),0.00) as toDayMinPrice,
+        (IFNULL(MAX(o2c.price),0.00) + IFNULL(MIN(o2c.price),0.00)) / 2 as toDayPrice,
+        IFNULL(sum(log.num),0.00) as toDayNum
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN red_point_o2c o2c ON o2c.id = log.orderid
+        WHERE
+         TO_DAYS(log.signtime) = TO_DAYS(NOW())
+        and log.`status` in (19,20,190,200)
+    </select>
+
+    <select id="selectOtcAllNum" resultType="map">
+        SELECT
+        IFNULL(sum(log.num),0.00) as allNum
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN red_point_o2c o2c ON o2c.id = log.orderid
+        WHERE
+        log.`status` in (19,20,190,200)
+    </select>
+
+    <select id="thisPrice" resultType="map">
+        SELECT
+        IFNULL(o2c.price,0.00) as thisPrice
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN red_point_o2c o2c ON o2c.id = log.orderid
+        WHERE
+        log.`status` in (19,20,190,200)
+        and
+        to_days(log.endtime) = to_days(now())
+        order by log.id desc
+        limit 0,1
+    </select>
+
+    <select id="yesDayPrice" resultType="map">
+        SELECT
+        IFNULL(o2c.price,0.00) as yesDayPrice
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN red_point_o2c o2c ON o2c.id = log.orderid
+        WHERE
+        log.`status` in (19,20,190,200)
+        and TO_DAYS( NOW( ) ) - TO_DAYS(log.endtime) &lt;= 1
+        order by log.id desc
+        limit 0,1
+    </select>
+
+    <select id="waitForZL" resultType="map">
+        select
+          log.id as logId,
+          enemyalipay as  enemyalipay,
+          endtime as endTime,
+          o2calipay.phone as phone,
+          log.price as price ,
+          log.num as num ,
+          log.signtime as signtime,
+          IFNULL(users.nick,'') as nick,
+          log.status as status
+        from
+            red_point_o2c_log log
+        LEFT JOIN red_point_user users on users.id = log.enemyid
+        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.enemyid
+        where log.id = #{orderId}
+        and log.userid = #{userId}
+    </select>
+
+    <select id="waitForZL_SELL" resultType="map">
+        select
+          log.id as logId,
+          enemyalipay as  enemyalipay,
+          endtime as endTime,
+          o2calipay.phone as phone,
+          log.price as price ,
+          log.num as num ,
+          log.signtime as signtime,
+          IFNULL(users.nick,'') as nick,
+          log.status as status
+        from
+            red_point_o2c_log log
+        LEFT JOIN red_point_user users on users.id = log.userid
+        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.userid
+        where log.id = #{orderId}
+        and log.enemyid = #{userId}
+    </select>
+
+    <select id="waitForMoney" resultType="map">
+        select
+        log.num as num,
+        alipay.phone as phone,
+        log.signtime as signtime ,
+        IFNULL(users.nick,'') as nick,
+        enemyalipay as enemyalipay,
+        log.price as price
+        from red_point_o2c_log log
+        LEFT JOIN red_point_user users on users.id = log.userid
+        LEFT JOIN red_point_o2c_alipay alipay on alipay.userid = log.userid
+        where enemyid = #{userId}
+        and log.id = #{logId}
+        and (log.status = 10 OR log.status = 100)
+    </select>
+
+    <select id="waitForMoney_SELL" resultType="map">
+        select
+        log.num as num,
+        alipay.phone as phone,
+        log.signtime as signtime ,
+        IFNULL(users.nick,'') as nick,
+        enemyalipay as enemyalipay,
+        log.price as price
+        from red_point_o2c_log log
+        LEFT JOIN red_point_user users on users.id = log.enemyid
+        LEFT JOIN red_point_o2c_alipay alipay on alipay.userid = log.enemyid
+        where log.userid = #{userId}
+        and log.id = #{logId}
+        and (log.status = 10 OR log.status = 100)
+    </select>
+
+    <select id="comitOrderMoney" resultType="map">
+        SELECT
+        log.id as id,
+        insert(users.name, 1, 1, '*')  as name ,
+        userpaynum as paynum ,
+        users.phone as phone,
+        log.payreturn as image,
+        log.signtime as signtime,
+        log.num as num
+        FROM red_point_o2c_log log
+        LEFT JOIN red_point_o2c_alipay users on users.userid = log.userid
+        where enemyid = #{userId}
+        and log.id = #{logId}
+        and (log.status = 15
+        OR log.status = 150)
+    </select>
+
+    <select id="comitOrderMoney_SELL" resultType="map">
+        SELECT
+        log.id as id,
+        insert(users.name, 1, 1, '*')  as name ,
+        userpaynum as paynum ,
+        users.phone as phone,
+        log.payreturn as image,
+        log.signtime as signtime,
+        log.num as num
+        FROM red_point_o2c_log log
+        LEFT JOIN red_point_o2c_alipay users on users.userid = log.enemyid
+        where log.userid = #{userId}
+        and log.id = #{logId}
+        and (log.status = 15
+        OR log.status = 150)
+    </select>
+
+    <select id="comitOrderZl" resultType="map">
+        select
+        log.num as num,
+        log.signtime as signtime ,
+        log.endtime as endtime ,
+        IFNULL(users.nick,'') as nick ,
+        log.price as price
+        from red_point_o2c_log log
+        LEFT JOIN red_point_user users on users.id = log.userid
+        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.userid
+        where enemyid = #{userId}
+        and log.id = #{logId}
+        and status in (19,20,190,200)
+    </select>
+
+    <select id="comitOrderZl_SELL" resultType="map">
+        select
+        log.num as num,
+        log.signtime as signtime ,
+        log.endtime as endtime ,
+        IFNULL(users.nick,'') as nick ,
+        log.price as price
+        from red_point_o2c_log log
+        LEFT JOIN red_point_user users on users.id = log.enemyid
+        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.enemyid
+        where log.userid = #{userId}
+        and log.id = #{logId}
+        and status in (19,20,190,200)
+    </select>
+
+    <select id="O2cBuyTradeOver" resultType="map">
+        SELECT
+        log.num as num ,
+        IFNULL(users.nick_name,'') as nick,
+        log.price as price,
+        log.num * log.price as money ,
+        log.signtime as signtime,
+        log.endtime as endtime
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN ytb_user users on users.user_id = log.enemyid
+        where
+        log.userid = #{userId}
+        and log.id = #{logId}
+    </select>
+
+    <select id="O2cBuyTradeOver_SELL" resultType="map">
+        SELECT
+        log.num as num ,
+        IFNULL(users.nick_name,'') as nick,
+        log.price as price,
+        log.num * log.price as money ,
+        log.signtime as signtime,
+        log.endtime as endtime
+        FROM
+        red_point_o2c_log log
+        LEFT JOIN ytb_user users on users.user_id = log.userid
+        where
+        log.enemyid = #{userId}
+        and log.id = #{logId}
+    </select>
+
+    <select id="comitOrderThirtyNum"  resultType="map">
+        SELECT
+        sum(IFNULL(log.num,'0')) as threeDayNum
+        FROM
+        red_point_o2c_log log
+        where
+        DATE_SUB(CURDATE(), INTERVAL 30 DAY) &lt;= date(signtime)
+        and
+        status in (19,20,190,200)
+        <if test=" type == 1">
+         and   userid = #{userId}
+        </if>
+        <if test="type == 2">
+          and  enemyid = #{userId}
+        </if>
+    </select>
+
+    <select id="comitOrderThirtyNum_SELL"  resultType="map">
+        SELECT
+        sum(IFNULL(log.num,'0')) as threeDayNum
+        FROM
+        red_point_o2c_log log
+        where
+        DATE_SUB(CURDATE(), INTERVAL 30 DAY) &lt;= date(signtime)
+        and
+        status in (19,20,190,200)
+        <if test=" type == 1">
+            and   enemyid = #{userId}
+        </if>
+        <if test="type == 2">
+            and  userid = #{userId}
+        </if>
+    </select>
+
+    <update id="OrderAppeal" parameterType="int">
+        update
+        red_point_o2c_log
+        SET
+        status = 25,
+        appealuser = #{userId}
+        WHERE
+        id = #{logId}
+        AND
+        status in (15,150)
+    </update>
+</mapper>
