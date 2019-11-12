@@ -24,6 +24,33 @@ public class User {
     private String otherTopId;
     private int integral;
     private int isPartner;
+    private String address;
+    private String userPhone;
+    private String aliQrCode;
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getUserPhone() {
+        return userPhone;
+    }
+
+    public void setUserPhone(String userPhone) {
+        this.userPhone = userPhone;
+    }
+
+    public String getAliQrCode() {
+        return aliQrCode;
+    }
+
+    public void setAliQrCode(String aliQrCode) {
+        this.aliQrCode = aliQrCode;
+    }
 
     public int getUserId() {
         return userId;

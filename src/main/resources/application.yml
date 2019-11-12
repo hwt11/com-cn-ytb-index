@@ -6,11 +6,11 @@ spring:
     name: zytrade-sevice-mobile    #指定应用的名称建议使用小写
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
-    url: jdbc:mysql://192.168.3.35:3306/red-point?useUnicode=yes&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true&useSSL=false&allowPublicKeyRetrieval=true
-#    url: jdbc:mysql://rm-uf6su1o76l7n3kvl9.mysql.rds.aliyuncs.com:3306/red-point?useUnicode=yes&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true&useSSL=false&allowPublicKeyRetrieval=true
+#    url: jdbc:mysql://192.168.3.35:3306/ytb?useUnicode=yes&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://rm-uf6nb463stic0t7xk.mysql.rds.aliyuncs.com:3306/ytb?useUnicode=yes&characterEncoding=UTF-8&useOldAliasMetadataBehavior=true&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: 685541877
-#    password: suD711UP
+#    password: 685541877
+    password: suD711UP
     driver-class-name: com.mysql.cj.jdbc.Driver
     initialSize: 1
     minIdle: 3
@@ -28,11 +28,10 @@ spring:
     useGlobalDataSourceStat: truea
   redis:
     database: 0
-    host: 192.168.3.35
-#    host: r-uf60se8w67gki7zt5m.redis.rds.aliyuncs.com
+#    host: 192.168.3.35
+    host: 127.0.0.1
     port: 6379
     password:
-#    password: suD711UP
 #    jedis:
 #      pool:
 #        max-active: 2000
@@ -43,12 +42,12 @@ spring:
 #    cluster:
 #      nodes: newcoin-0001-001.pkppxv.0001.apne1.cache.amazonaws.com:6379,newcoin-0001-002.pkppxv.0001.apne1.cache.amazonaws.com:6379
   rabbitmq:
-    host: 192.168.3.35
-#    host: 172.19.248.219
+#    host: 192.168.3.35
+    host: 172.19.86.37
 #    username: admin
 #    password: admin
-    username: yinweixx
-    password: 685541877
+    username: otc
+    password: otc
     #    支持发布确认
     publisher-confirms: true
     #    支持发布返回
@@ -64,6 +63,8 @@ spring:
         #        是否支持重试
         retry:
           enabled: true
+    port: 5672
+    virtual-host: otc
 
 
 mybatis:

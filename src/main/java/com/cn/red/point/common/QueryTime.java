@@ -13,6 +13,12 @@ public class QueryTime {
         return dateFormat.format(now);
     }
 
+    public static String queryTodayToKline(){
+        Date now = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd");//可以方便地修改日期格
+        return dateFormat.format(now);
+    }
+
     public static String queryTodaySec(){
         Date now = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//可以方便地修改日期格

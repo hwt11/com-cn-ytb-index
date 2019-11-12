@@ -3,6 +3,7 @@ package com.cn.red.point.enu;
 public enum SystemStatus {
     OK("0000","OK"),
     ERROR("1000","system error"),
+    NO_ALI("0005","请先上传支付宝二维码"),
     PASSWORD_ERROR("0001","password error"),
     NO_REFEREE("0002","no referee"),
     REPEAT("0003","号码已注册"),

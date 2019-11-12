@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface IndexMapper {
-    Map<String, Object> queryUserAliPay(int userId);
+    Map<String, Object> queryUserAliPay(@Param("userId") Integer userId);
     List<Map<String, Object>> queryOrders(@Param("page") int page, @Param("sort") String sort,@Param("search") String search,@Param("boo") String boo);
     List<Map<String, Object>> queryOrders_DESC(@Param("page") int page, @Param("sort") String sort,@Param("search") String search,@Param("boo") String boo);
     void insertOrder(Map<String,Object> map);
@@ -59,4 +59,7 @@ public interface IndexMapper {
     Map<String, Object> queryOrderFromMQ_Sell(String id);
     Map<String, Object> queryOrderFromMQ150(String id);
     void updateUserOrder(Map<String,Object> map);
+    List<Map<String,Object>> getKilne();
+    Map<String,Object> getKlineToday();
+    int addAliUrl(@Param("userId")String userId,@Param("aliUrl")String aliUrl);
 }

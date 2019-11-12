@@ -20,10 +20,10 @@ public class RedisUtilsEx {
 
 	protected static final Logger logger =  LoggerFactory.getLogger(RedisUtilsEx.class);
 
-	private static String redis_ip = "192.168.3.35";
+//	private static String redis_ip = "192.168.3.35";
+//    private static String redis_pwd = "";
+    private static String redis_ip = "127.0.0.1";
     private static String redis_pwd = "";
-//    private static String redis_ip = "r-uf60se8w67gki7zt5m.redis.rds.aliyuncs.com";
-//    private static String redis_pwd = "suD711UP";
 	private static Integer redis_port = 6379;
 
     // 可用连接实例的最大数目，默认值为8；
@@ -55,9 +55,9 @@ public class RedisUtilsEx {
             config.setTestOnBorrow(TEST_ON_BORROW);
 
             if(StringUtils.isNotEmpty(redis_pwd)) {
-            	jedisPool = new JedisPool(config, redis_ip, redis_port, TIMEOUT, redis_pwd);
+                jedisPool = new JedisPool(config, redis_ip, redis_port, TIMEOUT, redis_pwd);
             }else {
-            	jedisPool = new JedisPool(config, redis_ip, redis_port, TIMEOUT);
+                jedisPool = new JedisPool(config, redis_ip, redis_port, TIMEOUT);
             }
         } catch (Exception e) {
             e.printStackTrace();

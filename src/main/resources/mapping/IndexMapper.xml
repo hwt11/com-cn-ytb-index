@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.cn.red.point.o2c.mapper.IndexMapper">
-    <select id="queryUserAliPay" parameterType="int" resultType="map">
+    <select id="queryUserAliPay" resultType="map">
         SELECT
         nick_name as `name`,
         alipay_account as payno,
-        head_img as image,
+        head_img as image
         FROM
         ytb_user
         WHERE user_id = #{userId}
@@ -438,9 +438,9 @@
         SELECT
         phone
         FROM
-        red_point_o2c_alipay
+        ytb_user
         WHERE
-        userid = #{enemyid}
+        user_id = #{enemyid}
     </select>
 
     <update id="updateOrderStatusEND" parameterType="map">
@@ -770,16 +770,15 @@
           log.id as logId,
           enemyalipay as  enemyalipay,
           endtime as endTime,
-          o2calipay.phone as phone,
+          users.phone as phone,
           log.price as price ,
           log.num as num ,
           log.signtime as signtime,
-          IFNULL(users.nick,'') as nick,
+          IFNULL(users.nick_name,'') as nick,
           log.status as status
         from
             red_point_o2c_log log
-        LEFT JOIN red_point_user users on users.id = log.enemyid
-        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.enemyid
+        LEFT JOIN ytb_user users on users.user_id = log.enemyid
         where log.id = #{orderId}
         and log.userid = #{userId}
     </select>
@@ -789,16 +788,15 @@
           log.id as logId,
           enemyalipay as  enemyalipay,
           endtime as endTime,
-          o2calipay.phone as phone,
+          users.phone as phone,
           log.price as price ,
           log.num as num ,
           log.signtime as signtime,
-          IFNULL(users.nick,'') as nick,
+          IFNULL(users.nick_name,'') as nick,
           log.status as status
         from
             red_point_o2c_log log
-        LEFT JOIN red_point_user users on users.id = log.userid
-        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.userid
+        LEFT JOIN ytb_user users on users.user_id = log.userid
         where log.id = #{orderId}
         and log.enemyid = #{userId}
     </select>
@@ -806,14 +804,13 @@
     <select id="waitForMoney" resultType="map">
         select
         log.num as num,
-        alipay.phone as phone,
+        users.phone as phone,
         log.signtime as signtime ,
-        IFNULL(users.nick,'') as nick,
+        IFNULL(users.nick_name,'') as nick,
         enemyalipay as enemyalipay,
         log.price as price
         from red_point_o2c_log log
-        LEFT JOIN red_point_user users on users.id = log.userid
-        LEFT JOIN red_point_o2c_alipay alipay on alipay.userid = log.userid
+        LEFT JOIN ytb_user users on users.user_id = log.userid
         where enemyid = #{userId}
         and log.id = #{logId}
         and (log.status = 10 OR log.status = 100)
@@ -822,14 +819,13 @@
     <select id="waitForMoney_SELL" resultType="map">
         select
         log.num as num,
-        alipay.phone as phone,
+        users.phone as phone,
         log.signtime as signtime ,
-        IFNULL(users.nick,'') as nick,
+        IFNULL(users.nick_name,'') as nick,
         enemyalipay as enemyalipay,
         log.price as price
         from red_point_o2c_log log
-        LEFT JOIN red_point_user users on users.id = log.enemyid
-        LEFT JOIN red_point_o2c_alipay alipay on alipay.userid = log.enemyid
+        LEFT JOIN ytb_user users on users.user_id = log.enemyid
         where log.userid = #{userId}
         and log.id = #{logId}
         and (log.status = 10 OR log.status = 100)
@@ -845,7 +841,7 @@
         log.signtime as signtime,
         log.num as num
         FROM red_point_o2c_log log
-        LEFT JOIN red_point_o2c_alipay users on users.userid = log.userid
+        LEFT JOIN ytb_user users on users.user_id = log.userid
         where enemyid = #{userId}
         and log.id = #{logId}
         and (log.status = 15
@@ -855,14 +851,14 @@
     <select id="comitOrderMoney_SELL" resultType="map">
         SELECT
         log.id as id,
-        insert(users.name, 1, 1, '*')  as name ,
+        insert(users.real_name, 1, 1, '*')  as name ,
         userpaynum as paynum ,
         users.phone as phone,
         log.payreturn as image,
         log.signtime as signtime,
         log.num as num
         FROM red_point_o2c_log log
-        LEFT JOIN red_point_o2c_alipay users on users.userid = log.enemyid
+        LEFT JOIN ytb_user users on users.user_id = log.enemyid
         where log.userid = #{userId}
         and log.id = #{logId}
         and (log.status = 15
@@ -874,11 +870,10 @@
         log.num as num,
         log.signtime as signtime ,
         log.endtime as endtime ,
-        IFNULL(users.nick,'') as nick ,
+        IFNULL(users.nick_name,'') as nick ,
         log.price as price
         from red_point_o2c_log log
-        LEFT JOIN red_point_user users on users.id = log.userid
-        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.userid
+        LEFT JOIN ytb_user users on users.user_id = log.userid
         where enemyid = #{userId}
         and log.id = #{logId}
         and status in (19,20,190,200)
@@ -889,11 +884,10 @@
         log.num as num,
         log.signtime as signtime ,
         log.endtime as endtime ,
-        IFNULL(users.nick,'') as nick ,
+        IFNULL(users.nick_name,'') as nick ,
         log.price as price
         from red_point_o2c_log log
-        LEFT JOIN red_point_user users on users.id = log.enemyid
-        LEFT JOIN red_point_o2c_alipay o2calipay on o2calipay.userid = log.enemyid
+        LEFT JOIN ytb_user users on users.user_id = log.enemyid
         where log.userid = #{userId}
         and log.id = #{logId}
         and status in (19,20,190,200)
@@ -903,6 +897,7 @@
         SELECT
         log.num as num ,
         IFNULL(users.nick_name,'') as nick,
+        users.ali_qr_code as aliUrl,
         log.price as price,
         log.num * log.price as money ,
         log.signtime as signtime,
@@ -919,6 +914,7 @@
         SELECT
         log.num as num ,
         IFNULL(users.nick_name,'') as nick,
+        users.ali_qr_code as aliUrl,
         log.price as price,
         log.num * log.price as money ,
         log.signtime as signtime,
@@ -975,5 +971,34 @@
         id = #{logId}
         AND
         status in (15,150)
+    </update>
+
+    <select id="getKilne" resultType="map">
+        SELECT
+        IFNULL((MAX(price)+ MIN(price))/2,0) as price,
+        DATE_FORMAT(signtime ,'%m/%d') as date
+        FROM
+        red_point_o2c
+        where
+        DATE_SUB(CURDATE(), INTERVAL 6 DAY) &lt;= date(signtime)
+        GROUP BY DATE_FORMAT(signtime ,'%Y-%m-%d')
+        ORDER BY signtime asc
+        LIMIT 6
+    </select>
+    <select id="getKlineToday" resultType="map">
+        SELECT
+        IFNULL(price,0) as price,
+        DATE_FORMAT(signtime ,'%m/%d') as date
+        FROM
+        red_point_o2c
+        ORDER BY signtime desc
+        LIMIT 1
+    </select>
+    <update id="addAliUrl">
+        UPDATE
+        ytb_user
+        SET ali_qr_code = #{aliUrl}
+        WHERE
+        user_id = #{userId}
     </update>
 </mapper>

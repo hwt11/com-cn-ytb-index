@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 @RestController
 @RequestMapping(value = "o2c", method = RequestMethod.POST, produces = "application/json;charset=UTF-8")
@@ -52,6 +55,9 @@ public class IndexController extends Action {
 //        },token,request);
 //    }
 
+
+
+
     @RequestMapping("orders")
     public String orders(HttpServletRequest request,
                          @RequestParam(value = "page",defaultValue = "1") int page,
@@ -64,6 +70,22 @@ public class IndexController extends Action {
                 return indexService.queryOrders(page,type,search,boo);
             }
         },request);
+    }
+
+    @RequestMapping("otcIsOpen")
+    public String otcIsOpen(HttpServletRequest request,
+                      @RequestParam(value = "token") String token){
+        return ajaxQuery(new QueryCmd() {
+            @Override
+            public Object query(User user) {
+                if(StringUtils.isEmpty(user.getAliQrCode())){
+                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData(null);
+                }
+                if (!QueryTime.checkTime())
+                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
+                return Result.OK.setMsg("success").setData(null);
+            }
+        },token,request);
     }
 
     /**
@@ -83,10 +105,13 @@ public class IndexController extends Action {
         return ajaxQuery(new QueryCmd() {
             @Override
             public Object query(User user) {
-                if (!QueryTime.checkTime())
-                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
-                if (new BigDecimal(price).compareTo(new BigDecimal(2)) < 0)
-                    return Result.ERROR.setMsg("单价不能低于2元").setData(null);
+//                if(StringUtils.isEmpty(user.getAliQrCode())){
+//                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData(null);
+//                }
+//                if (!QueryTime.checkTime())
+//                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
+                if (new BigDecimal(price).compareTo(new BigDecimal(0.001)) <= 0)
+                    return Result.ERROR.setMsg("最低价为0.001").setData(null);
                 return indexService.insertOrder(user,price,count,passWord);
             }
         },token,request);
@@ -101,10 +126,13 @@ public class IndexController extends Action {
         return ajaxQuery(new QueryCmd() {
             @Override
             public Object query(User user) throws ParseException {
-                if (!QueryTime.checkTime())
-                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
-                if (new BigDecimal(price).compareTo(new BigDecimal(2)) != 0)
-                    return Result.ERROR.setMsg("单价必须为2元").setData(null);
+//                if(StringUtils.isEmpty(user.getAliQrCode())){
+//                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData(null);
+//                }
+//                if (!QueryTime.checkTime())
+//                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
+                if (new BigDecimal(price).compareTo(new BigDecimal(0.001)) <= 0)
+                    return Result.ERROR.setMsg("最低价为0.001").setData(null);
                 return indexService.insertSellOrder(user,price,count,password);
             }
         },token,request);
@@ -342,7 +370,7 @@ public class IndexController extends Action {
     @RequestMapping("orderBuyStayLog")
     public String orderBuystayLog(HttpServletRequest request,
                                    @RequestParam(value = "token") String token,
-                                   @RequestParam(value = "page")String page,
+                                   @RequestParam(value = "aliUrl")String page,
                                   @RequestParam(value = "boo",defaultValue = "0") String boo) {
         return ajaxQuery(new QueryCmd() {
             @Override
@@ -402,7 +430,6 @@ public class IndexController extends Action {
     }
 
 
-
     /**
      * otc交易行情
      */
@@ -422,6 +449,26 @@ public class IndexController extends Action {
             }
         },token,request);
     }
+
+    /**
+     * otc交易行情
+     */
+    @RequestMapping("O2cGetKline")
+    public String O2cGetKline(HttpServletRequest request, @RequestParam(value = "token") String token) {
+        return ajaxQuery(new QueryCmd() {
+            @Override
+            public Object query(User user) {
+                try {
+                    return indexService.O2cGetKline(user);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Result.ERROR.setMsg("system error").setData(null);
+                }
+
+            }
+        },token,request);
+    }
+
 
     /**
      * otc等待对方确认释放指令牌
@@ -518,7 +565,7 @@ public class IndexController extends Action {
      */
     @RequestMapping("comitOrderThirtyNum")
     public String comitOrderThirtyNum(HttpServletRequest request,
-                               @RequestParam(value = "token") String token,
+                                      @RequestParam(value = "token") String token,
                                       @RequestParam(value = "type")String type) {
         return ajaxQuery(new QueryCmd() {
             @Override
@@ -547,6 +594,24 @@ public class IndexController extends Action {
             public Object query(User user) {
                 try {
                     return indexService.OrderAppeal(user,logId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return Result.ERROR.setMsg("system error").setData(null);
+                }
+
+            }
+        },token,request);
+    }
+
+    @RequestMapping("addAliUrl")
+    public String addAliUrl(HttpServletRequest request,
+                              @RequestParam(value = "token") String token,
+                              @RequestParam(value = "aliUrl")String aliUrl) {
+        return ajaxQuery(new QueryCmd() {
+            @Override
+            public Object query(User user) {
+                try {
+                    return indexService.addAliUrl(user,aliUrl,token);
                 } catch (Exception e) {
                     e.printStackTrace();
                     return Result.ERROR.setMsg("system error").setData(null);
