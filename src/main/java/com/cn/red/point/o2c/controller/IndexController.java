@@ -38,22 +38,24 @@ public class IndexController extends Action {
 //            }
 //        },token,request);
 //    }
-//
-//    @RequestMapping("commitAliPay")
-//    public String commitAliPay(HttpServletRequest request,
-//                               @RequestParam(value = "token") String token,
-//                               @RequestParam(value = "name") String name,
-//                               @RequestParam(value = "payno") String payno,
-//                               @RequestParam(value = "image") String image,
-//                               @RequestParam(value = "phone") String phone,
-//                               @RequestParam(value = "password") String password) {
-//        return ajaxQuery(new QueryCmd() {
-//            @Override
-//            public Object query(User user) {
-//                return indexService.commitAliPay(user,name,payno,image,phone,password);
-//            }
-//        },token,request);
-//    }
+
+
+    @RequestMapping("commitAliPay")
+    public String commitAliPay(HttpServletRequest request,
+                               @RequestParam(value = "token") String token,
+                               @RequestParam(value = "image") String image,
+                               @RequestParam(value = "password") String password,
+                               @RequestParam(value = "passwordTwo") String passwordTwo) {
+        return ajaxQuery(new QueryCmd() {
+            @Override
+            public Object query(User user) {
+                if(!password.equals(passwordTwo)){
+                    return new Result().ERROR.setMsg("密码不一致").setData("");
+                }
+                return indexService.commitAliPay(user,image,password);
+            }
+        },token,request);
+    }
 
 
 
@@ -79,11 +81,25 @@ public class IndexController extends Action {
             @Override
             public Object query(User user) {
                 if(StringUtils.isEmpty(user.getAliQrCode())){
-                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData(null);
+
+                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData("");
                 }
-                if (!QueryTime.checkTime())
-                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
-                return Result.OK.setMsg("success").setData(null);
+                String s = RedisUtilsEx.get("user_prohibit_" + user.getUserId());
+                if(StringUtils.isNotEmpty(s)){
+                    Integer dt = Integer.parseInt(s) ;
+                    if (dt < 60) {
+                        s = dt + "分钟";
+                        return Result.NO_PROHIBIT.setMsg("您已被限制交易").setData(s);
+                    }
+                    int hour = Math.round(dt / 120);
+                    int minute = Math.round(dt - (hour * 120));
+                    s = hour + "小时" + (minute == 0 ? "" : minute + "分钟");
+
+                    return Result.NO_PROHIBIT.setMsg("您已被限制交易").setData(s);
+                }
+
+
+                return Result.OK.setMsg("success").setData("");
             }
         },token,request);
     }
@@ -105,12 +121,7 @@ public class IndexController extends Action {
         return ajaxQuery(new QueryCmd() {
             @Override
             public Object query(User user) {
-//                if(StringUtils.isEmpty(user.getAliQrCode())){
-//                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData(null);
-//                }
-//                if (!QueryTime.checkTime())
-//                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
-                if (new BigDecimal(price).compareTo(new BigDecimal(0.001)) <= 0)
+                if (new BigDecimal(price).compareTo(new BigDecimal(0.001)) < 0)
                     return Result.ERROR.setMsg("最低价为0.001").setData(null);
                 return indexService.insertOrder(user,price,count,passWord);
             }
@@ -126,12 +137,7 @@ public class IndexController extends Action {
         return ajaxQuery(new QueryCmd() {
             @Override
             public Object query(User user) throws ParseException {
-//                if(StringUtils.isEmpty(user.getAliQrCode())){
-//                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData(null);
-//                }
-//                if (!QueryTime.checkTime())
-//                    return Result.ERROR.setMsg("OTC在早9点至晚9点开放").setData(null);
-                if (new BigDecimal(price).compareTo(new BigDecimal(0.001)) <= 0)
+                if (new BigDecimal(price).compareTo(new BigDecimal(0.001)) < 0)
                     return Result.ERROR.setMsg("最低价为0.001").setData(null);
                 return indexService.insertSellOrder(user,price,count,password);
             }

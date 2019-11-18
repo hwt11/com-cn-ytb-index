@@ -27,6 +27,15 @@ public class User {
     private String address;
     private String userPhone;
     private String aliQrCode;
+    private String otcPwd;
+
+    public String getOtcPwd() {
+        return otcPwd;
+    }
+
+    public void setOtcPwd(String otcPwd) {
+        this.otcPwd = otcPwd;
+    }
 
     public String getAddress() {
         return address;

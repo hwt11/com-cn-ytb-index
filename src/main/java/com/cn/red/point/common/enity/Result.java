@@ -8,6 +8,7 @@ public class Result {
     public static Result ERROR = new Result(SystemStatus.ERROR.getCode(), SystemStatus.ERROR.getMsg(), (Object) null);
     public static Result NO_SIGN = new Result(SystemStatus.NO_SIGN.getCode(), SystemStatus.NO_SIGN.getMsg(), (Object) null);
     public static Result NO_ALI = new Result(SystemStatus.NO_ALI.getCode(), SystemStatus.NO_ALI.getMsg(), (Object) null);
+    public static Result NO_PROHIBIT = new Result(SystemStatus.NO_PROHIBIT.getCode(), SystemStatus.NO_ALI.getMsg(), (Object) null);
     private String code;
     private String msg;
     private Object data;

@@ -62,4 +62,5 @@ public interface IndexMapper {
     List<Map<String,Object>> getKilne();
     Map<String,Object> getKlineToday();
     int addAliUrl(@Param("userId")String userId,@Param("aliUrl")String aliUrl);
+    int updateUserAli(Map<String,Object> map);
 }

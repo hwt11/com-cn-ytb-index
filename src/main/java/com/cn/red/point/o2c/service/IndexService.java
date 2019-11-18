@@ -45,6 +45,18 @@ public class IndexService extends CommonService{
         return Result.OK.setMsg("success").setData(map);
     }
 
+    public Result commitAliPay(User user,String image,String pwd){
+        Map<String,Object> map = new HashMap<>();
+        map.put("userId",user.getUserId());
+        map.put("image",image);
+        map.put("pwd",Sha256.getSHA256(pwd));
+        int i =  indexMapper.updateUserAli(map);
+        if(i!= 1){
+            return new Result().ERROR.setMsg("添加失败").setData("");
+        }
+        return new Result().OK.setMsg("添加成功").setData("");
+    }
+
     public Result queryOrders(int page,int type,String search,String boo) {
         page = (page - 1) * 20;
         if (type == 0) {
@@ -115,8 +127,11 @@ public class IndexService extends CommonService{
     public Result insertOrder(User user, String price, int count,String passWord) {
         if (StringUtils.isNotEmpty(RedisUtilsEx.get(RedisKeys.USER_O2C + user.getUserId())))
             return Result.ERROR.setMsg("您的O2C账户被停用").setData(null);
-        if (new BigDecimal(count).compareTo(new BigDecimal(100)) < 0)
-            return Result.ERROR.setMsg("最低数量100个").setData(null);
+        if (new BigDecimal(count).compareTo(new BigDecimal(1000)) < 0)
+            return Result.ERROR.setMsg("最低数量1000个").setData(null);
+        int num = indexMapper.queryOrderCount(user.getUserId());
+        if (num == 1)
+            return Result.ERROR.setMsg("最多只能挂1单").setData(null);
 //        passWord = Sha256.getSHA256(user.getUserId() + passWord);
 //        Map<String,Object> map = indexMapper.queryUserAliPay(user.getUserId());
 //        if (map == null)
@@ -132,6 +147,7 @@ public class IndexService extends CommonService{
 //                return Result.ERROR.setMsg("每日最多挂单量为" + MAX.toString());
 //            RedisUtilsEx.set(RedisKeys.USER_O2C_COUNT + QueryTime.queryToday() + user.getId(),c.toString(),Time.DAY.getSec());
 //        }
+        judgeNum(String.valueOf(user.getUserId()));
         indexMapper.insertOrder(new HashMap<>() {
             {
                 put("userId",user.getUserId());
@@ -149,11 +165,13 @@ public class IndexService extends CommonService{
     public Result insertSellOrder(User user, String price, int count,String passWord) {
         if (StringUtils.isNotEmpty(RedisUtilsEx.get(RedisKeys.USER_O2C + user.getUserId())))
             return Result.ERROR.setMsg("您的O2C账户被停用").setData(null);
-        if (new BigDecimal(count).compareTo(new BigDecimal(100)) < 0)
-            return Result.ERROR.setMsg("最低数量100个").setData(null);
+        if (new BigDecimal(count).compareTo(new BigDecimal(1000)) < 0)
+            return Result.ERROR.setMsg("最低数量1000个").setData(null);
+        if (new BigDecimal(count).compareTo(new BigDecimal(10000000)) > 0)
+            return Result.ERROR.setMsg("最高数量10000000个").setData(null);
         int num = indexMapper.queryOrderCount(user.getUserId());
-        if (num > 3)
-            return Result.ERROR.setMsg("最多只能挂3单").setData(null);
+        if (num == 1)
+            return Result.ERROR.setMsg("最多只能挂1单").setData(null);
         if (new BigDecimal(count).compareTo(MAX) > 0)
             return Result.ERROR.setMsg("每日最多挂单量为" + MAX.toString());
 //        passWord = Sha256.getSHA256(user.getUserId() + passWord);
@@ -179,8 +197,8 @@ public class IndexService extends CommonService{
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",user.getUserId());
-                put("ytlmoney",userMoney.getYtl_money().subtract(new BigDecimal(count)).setScale(4,RoundingMode.HALF_DOWN));
-                put("coldytlmoney",userMoney.getCold_ytl().add(new BigDecimal(count)).setScale(4,RoundingMode.HALF_DOWN));
+                put("zlmoney",userMoney.getYtl_money().subtract(new BigDecimal(count)).setScale(4,RoundingMode.HALF_DOWN));
+                put("coldzlmoney",userMoney.getCold_ytl().add(new BigDecimal(count)).setScale(4,RoundingMode.HALF_DOWN));
             }
         });
         indexMapper.insertOrder(new HashMap<>() {
@@ -200,14 +218,19 @@ public class IndexService extends CommonService{
     public Result carryBuy(User user, String orderId, int count) {
         if (StringUtils.isNotEmpty(RedisUtilsEx.get(RedisKeys.USER_O2C + user.getUserId())))
             return Result.ERROR.setMsg("您的O2C账户被停用").setData(null);
-        if (count < 100)
-            return Result.ERROR.setMsg("最低数量100个").setData(null);
+        if (count < 1000)
+            return Result.ERROR.setMsg("最低数量1000个").setData(null);
+        if (count > 10000000)
+            return Result.ERROR.setMsg("最高数量10000000个").setData(null);
         Map<String,Object> alipay = indexMapper.queryUserAliPay(user.getUserId());
         UserMoney userMoney = indexMapper.queryUserMoney(user.getUserId());
         BigDecimal needCount = new BigDecimal(count);
         if (userMoney.getYtl_money().compareTo(needCount) < 0)
             return Result.ERROR.setMsg("ytl数量不足").setData(null);
         Map<String,Object> order = indexMapper.queryOrder(orderId);
+        if(judgeNum(order.get("userid").toString())){
+            return Result.ERROR.setMsg("该买家当日已无法完成交易").setData("");
+        }
         if (order == null)
             return Result.ERROR.setData(null).setMsg("订单不存在");
         if (new BigDecimal(order.get("count").toString()).compareTo(new BigDecimal(count)) < 0)
@@ -267,6 +290,9 @@ public class IndexService extends CommonService{
         if (count < 100)
             return Result.ERROR.setMsg("最低数量100个").setData(null);
         Map<String,Object> order = indexMapper.querySellOrder(orderId);
+        if(judgeNum(order.get("userid").toString())){
+            return Result.ERROR.setMsg("该卖家当日已无法完成交易").setData("");
+        }
         if (order == null)
             return Result.ERROR.setData(null).setMsg("订单不存在");
         Map<String,Object> alipay = indexMapper.queryUserAliPay(Integer.parseInt(order.get("userid").toString()));
@@ -281,7 +307,7 @@ public class IndexService extends CommonService{
                 put("num",count);
                 put("enemynick",user.getNickName());
                 put("enemyimage",user.getHeadImg());
-                put("enemyalipay",alipay.get("payno"));
+                put("enemyalipay",alipay.get("payno")==null?"":alipay.get("payno"));
                 put("enemypayimage",alipay.get("image"));
                 put("enemyname",alipay.get("name"));
                 put("status",100);
@@ -655,6 +681,7 @@ public class IndexService extends CommonService{
         updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()),Double.parseDouble(order.get("num").toString()),0,"O2C市场收购");
         setRedisUserNum(user.getUserId(),needCount);
         setRedisUserNum(Integer.parseInt(order.get("enemyid").toString()),needCount);
+
         return Result.OK.setMsg("确认成功").setData(null);
     }
 
@@ -752,14 +779,20 @@ public class IndexService extends CommonService{
         return Result.OK.setMsg("success").setData(kline);
     }
 
-    public static void main(String[] args) {
-        System.out.println(QueryTime.queryTodayToKline());
-    }
     public void setRedisUserNum(int userId,BigDecimal needCount){
         executorService.execute(()->{
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
             String format1 = format.format(new Date());
             String userIdNum = RedisUtilsEx.get("otc_order_num_" + userId + "_" + format1);
+            String successNum = RedisUtilsEx.get("otc_success_num_" + userId +"_"+ format1);
+            if(StringUtils.isEmpty(successNum)){
+                RedisUtilsEx.set("otc_success_num_"+userId+"_"+format1,"1");
+            }else{
+                if(Integer.valueOf(successNum) >=3){
+                    return;
+                }
+                RedisUtilsEx.set("otc_success_num_"+userId+"_"+format1,String.valueOf(Integer.parseInt(successNum)+1));
+            }
             if(StringUtils.isNotEmpty(userIdNum)){
                 BigDecimal newNeedCount = new BigDecimal(userIdNum).add(needCount).setScale(4,RoundingMode.DOWN);
                 RedisUtilsEx.set("otc_order_num_"+userId+"_"+format1,newNeedCount.toString(),2592000);
@@ -767,6 +800,18 @@ public class IndexService extends CommonService{
                 RedisUtilsEx.set("otc_order_num_"+userId+"_"+format1,needCount.toString(),2592000);
             }
         });
+    }
+
+    public boolean judgeNum(String userId){
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        String format1 = format.format(new Date());
+        String useridNum = RedisUtilsEx.get("otc_success_num_" + userId + "_" + format1);
+        if(StringUtils.isNotEmpty(useridNum)){
+            if(Integer.parseInt(useridNum) >= 3){
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -813,6 +858,7 @@ public class IndexService extends CommonService{
     public Result historyLogList(User user,String status,String type,String page,String boo){
         String userId = user.getUserId()+"";
         int pageNum = (Integer.parseInt(page)-1);
+        Map<String,Object> result = new HashMap<>();
         if(status.equals("0")){
             if(type.equals("buy")){
                 return Result.OK.setMsg("success").setData(indexMapper.findO2cByUserId(userId,pageNum*10,boo));

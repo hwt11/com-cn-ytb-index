@@ -11,6 +11,16 @@
         WHERE user_id = #{userId}
     </select>
 
+    <update id="updateUserAli" parameterType="map">
+        UPDATE
+        ytb_user
+        set
+        otc_pwd = #{pwd},
+        ali_qr_code = #{image}
+        where
+        user_id = #{userId}
+    </update>
+
     <select id="queryOrderCount" parameterType="int" resultType="int">
         SELECT
         count(id)
