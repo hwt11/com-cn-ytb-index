@@ -97,6 +97,7 @@ public class IndexController extends Action {
 
                     return Result.NO_PROHIBIT.setMsg("您已被限制交易").setData(s);
                 }
+                //TODO 差实名认证查询 返回状态根据前端定义
 
 
                 return Result.OK.setMsg("success").setData("");
