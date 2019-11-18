@@ -166,7 +166,7 @@ public class IndexService extends CommonService{
         if (StringUtils.isEmpty(val))
             RedisUtilsEx.set(RedisKeys.USER_O2C_COUNT + QueryTime.queryToday() + user.getUserId(),String.valueOf(count),Time.ONEYEAR.getSec());
         else {
-            BigDecimal c = new BigDecimal(val).add(new BigDecimal(count)).setScale(0, RoundingMode.DOWN);
+            BigDecimal c = new BigDecimal(val).add(new BigDecimal(count)).setScale(4, RoundingMode.DOWN);
             if (c.compareTo(MAX) > 0)
                 return Result.ERROR.setMsg("每日最多挂单量为" + MAX.toString());
             RedisUtilsEx.set(RedisKeys.USER_O2C_COUNT + QueryTime.queryToday() + user.getUserId(),c.toString(),Time.ONEYEAR.getSec());
@@ -215,12 +215,12 @@ public class IndexService extends CommonService{
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",user.getUserId());
-                put("zlmoney",userMoney.getYtl_money().subtract(needCount).setScale(2,RoundingMode.HALF_DOWN));
-                put("coldzlmoney",userMoney.getCold_ytl().add(needCount).setScale(2,RoundingMode.HALF_DOWN));
+                put("zlmoney",userMoney.getYtl_money().subtract(needCount).setScale(4,RoundingMode.HALF_DOWN));
+                put("coldzlmoney",userMoney.getCold_ytl().add(needCount).setScale(4,RoundingMode.HALF_DOWN));
             }
         });
         BigDecimal percent = vipPercentFromMoney(userMoney);
-        BigDecimal p = needCount.divide(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)),2,RoundingMode.DOWN);
+        BigDecimal p = needCount.divide(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)),4,RoundingMode.DOWN);
         Map<String,Object> param = new HashMap<>(){
             {
                 put("price",order.get("price"));
@@ -306,7 +306,9 @@ public class IndexService extends CommonService{
                 put("status",100);
             }
         }),"1800000");
-        return Result.OK.setMsg("确认成功，请及时付款").setData(null);
+        Map<String,Object> map = new HashMap<>();
+        map.put("logId",param.get("id"));
+        return Result.OK.setMsg("确认成功，请及时付款").setData(map);
     }
 
     @Transactional(timeout = 5)
@@ -326,7 +328,7 @@ public class IndexService extends CommonService{
             indexMapper.cancelOrder(order.get("orderid").toString());
             UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
             BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
             indexMapper.updateUserZLMoney(new HashMap<>(){
                 {
                     put("userId",order.get("enemyid"));
@@ -351,7 +353,7 @@ public class IndexService extends CommonService{
                 return;
             UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
             BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
             indexMapper.updateUserZLMoney(new HashMap<>(){
                 {
                     put("userId",order.get("enemyid"));
@@ -395,7 +397,7 @@ public class IndexService extends CommonService{
                 if (StringUtils.isEmpty(number))
                     RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,order.get("num").toString(),Time.MOUNTH.getSec());
                 else
-                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(2,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
+                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
                 RedisUtilsEx.set(RedisKeys.NOW_PRICE,order.get("price").toString(),Time.MOUNTH.getSec());
             });
             updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()),Double.parseDouble(order.get("num").toString()),0,"O2C市场收购");
@@ -431,7 +433,7 @@ public class IndexService extends CommonService{
                 return;
             UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("userid").toString()));
             BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
             indexMapper.updateUserZLMoney(new HashMap<>(){
                 {
                     put("userId",order.get("userid"));
@@ -475,7 +477,7 @@ public class IndexService extends CommonService{
                 if (StringUtils.isEmpty(number))
                     RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,order.get("num").toString(),Time.MOUNTH.getSec());
                 else
-                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(2,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
+                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
                 RedisUtilsEx.set(RedisKeys.NOW_PRICE,order.get("price").toString(),Time.MOUNTH.getSec());
             });
             updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()),Double.parseDouble(order.get("num").toString()),0,"O2C市场收购");
@@ -513,7 +515,7 @@ public class IndexService extends CommonService{
             return Result.ERROR.setMsg("订单不存在").setData(null);
         UserMoney userMoney = indexMapper.queryUserMoney(user.getUserId());
         BigDecimal percent = vipPercentFromMoney(userMoney);
-        BigDecimal needCount = new BigDecimal(map.get("count").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+        BigDecimal needCount = new BigDecimal(map.get("count").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
         BigDecimal re = userMoney.getCold_ytl().compareTo(needCount) < 0 ? userMoney.getCold_ytl() : needCount;
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
@@ -600,12 +602,12 @@ public class IndexService extends CommonService{
             return Result.ERROR.setMsg("订单不存在").setData(null);
         UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
         BigDecimal percent = vipPercentFromMoney(userMoney);
-        BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+        BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",order.get("enemyid"));
                 put("zlmoney",userMoney.getYtl_money());
-                put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(2,RoundingMode.HALF_DOWN));
+                put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(4,RoundingMode.HALF_DOWN));
             }
         });
         updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()),needCount.doubleValue(),1,"O2C市场寄售");
@@ -613,7 +615,7 @@ public class IndexService extends CommonService{
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",order.get("userid"));
-                put("zlmoney",_userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(2,RoundingMode.HALF_DOWN));
+                put("zlmoney",_userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(4,RoundingMode.HALF_DOWN));
                 put("coldzlmoney",_userMoney.getCold_ytl());
             }
         });
@@ -646,7 +648,7 @@ public class IndexService extends CommonService{
             if (StringUtils.isEmpty(number))
                 RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,order.get("num").toString(),Time.MOUNTH.getSec());
             else
-                RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(2,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
+                RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
             RedisUtilsEx.set(RedisKeys.NOW_PRICE,order.get("price").toString(),Time.MOUNTH.getSec());
         });
 
@@ -670,12 +672,12 @@ public class IndexService extends CommonService{
             return Result.ERROR.setMsg("订单不存在").setData(null);
         UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("userid").toString()));
         BigDecimal percent = vipPercentFromMoney(userMoney);
-        BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+        BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",order.get("userid"));
                 put("zlmoney",userMoney.getYtl_money());
-                put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(2,RoundingMode.HALF_DOWN));
+                put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(4,RoundingMode.HALF_DOWN));
             }
         });
         updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()),needCount.doubleValue(),1,"O2C市场寄售");
@@ -683,7 +685,7 @@ public class IndexService extends CommonService{
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",order.get("enemyid"));
-                put("zlmoney",_userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(2,RoundingMode.HALF_DOWN));
+                put("zlmoney",_userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(4,RoundingMode.HALF_DOWN));
                 put("coldzlmoney",_userMoney.getCold_ytl());
             }
         });
@@ -716,7 +718,7 @@ public class IndexService extends CommonService{
             if (StringUtils.isEmpty(number))
                 RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,order.get("num").toString(),Time.MOUNTH.getSec());
             else
-                RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(2,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
+                RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
             RedisUtilsEx.set(RedisKeys.NOW_PRICE,order.get("price").toString(),Time.MOUNTH.getSec());
         });
 
@@ -759,7 +761,7 @@ public class IndexService extends CommonService{
             String format1 = format.format(new Date());
             String userIdNum = RedisUtilsEx.get("otc_order_num_" + userId + "_" + format1);
             if(StringUtils.isNotEmpty(userIdNum)){
-                BigDecimal newNeedCount = new BigDecimal(userIdNum).add(needCount).setScale(2,RoundingMode.DOWN);
+                BigDecimal newNeedCount = new BigDecimal(userIdNum).add(needCount).setScale(4,RoundingMode.DOWN);
                 RedisUtilsEx.set("otc_order_num_"+userId+"_"+format1,newNeedCount.toString(),2592000);
             }else{
                 RedisUtilsEx.set("otc_order_num_"+userId+"_"+format1,needCount.toString(),2592000);
@@ -926,8 +928,8 @@ public class IndexService extends CommonService{
             result.put("bili","0%");
         else
             result.put("bili",(new BigDecimal(today_price).subtract(new BigDecimal(yes_price)))
-                    .divide(new BigDecimal(yes_price),2,RoundingMode.DOWN)
-                    .multiply(new BigDecimal(100)).setScale(2,RoundingMode.DOWN).toString() + "%");
+                    .divide(new BigDecimal(yes_price),4,RoundingMode.DOWN)
+                    .multiply(new BigDecimal(100)).setScale(4,RoundingMode.DOWN).toString() + "%");
         return new Result("0000","success",result);
     }
 
@@ -963,7 +965,7 @@ public class IndexService extends CommonService{
             map.put("endTime",l-time);
             UserMoney userMoney = indexMapper.queryUserMoney(user.getUserId());
             BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(map.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+            BigDecimal needCount = new BigDecimal(map.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
             map.put("needCount",needCount);
             map.put("fee",needCount.subtract(new BigDecimal(map.get("num").toString())));
             map.put("money",new BigDecimal(map.get("price").toString()).multiply(new BigDecimal(map.get("num").toString())));
@@ -986,7 +988,7 @@ public class IndexService extends CommonService{
             map.put("endTimeHour",l-time);
             UserMoney userMoney = indexMapper.queryUserMoney(user.getUserId());
             BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(map.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+            BigDecimal needCount = new BigDecimal(map.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
             map.put("needCount",percent.multiply(new BigDecimal(100)).toPlainString()+"%");
             map.put("fee",needCount.subtract(new BigDecimal(map.get("num").toString())));
             return new Result("0000","success",map);
@@ -1004,7 +1006,7 @@ public class IndexService extends CommonService{
         if(map != null){
             UserMoney userMoney = indexMapper.queryUserMoney(user.getUserId());
             BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(map.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(2,RoundingMode.HALF_DOWN));
+            BigDecimal needCount = new BigDecimal(map.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
             map.put("needCount",needCount);
             map.put("fee",needCount.subtract(new BigDecimal(map.get("num").toString())));
             map.put("money",new BigDecimal(map.get("price").toString()).multiply(new BigDecimal(map.get("num").toString())));

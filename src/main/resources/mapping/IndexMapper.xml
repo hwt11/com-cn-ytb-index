@@ -834,7 +834,7 @@
     <select id="comitOrderMoney" resultType="map">
         SELECT
         log.id as id,
-        insert(users.name, 1, 1, '*')  as name ,
+        insert(users.real_name, 1, 1, '*')  as name ,
         userpaynum as paynum ,
         users.phone as phone,
         log.payreturn as image,
