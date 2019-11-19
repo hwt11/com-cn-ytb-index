@@ -36,6 +36,17 @@
         )
     </select>
 
+    <select id="queryOrderIngCount" parameterType="int" resultType="int">
+        SELECT
+        count(id)
+        FROM
+        red_point_o2c_log
+        WHERE
+        endtime is null
+        AND
+        TO_DAYS(signtime) = TO_DAYS(NOW())
+    </select>
+
     <select id="queryOrders" resultType="map">
         SELECT
         id,
