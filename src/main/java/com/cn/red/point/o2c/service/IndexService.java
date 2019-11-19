@@ -8,6 +8,8 @@ import com.cn.red.point.enu.Time;
 import com.cn.red.point.o2c.common.UserMoney;
 import com.cn.red.point.o2c.mapper.IndexMapper;
 import com.cn.red.point.redis.RedisUtilsEx;
+import com.rabbitmq.client.Channel;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.ParseException;
@@ -277,7 +280,7 @@ public class IndexService extends CommonService{
                 put("id",param.get("id"));
                 put("status",10);
             }
-        }),"1800000");
+        }),"3600000");
 //        SMSTool.sendMsg(alipay.get("phone").toString());
         updateZLMoneyLOG(user.getUserId(),needCount.doubleValue(),1,"O2C锁定");
         return Result.OK.setMsg("出售成功").setData(null);
@@ -331,182 +334,190 @@ public class IndexService extends CommonService{
                 put("id",param.get("id"));
                 put("status",100);
             }
-        }),"1800000");
+        }),"43200000");
         Map<String,Object> map = new HashMap<>();
         map.put("logId",param.get("id"));
         return Result.OK.setMsg("确认成功，请及时付款").setData(map);
     }
 
     @Transactional(timeout = 5)
-    public void cancelOrder(Map<String, Object> map) {
-        if (map == null)
-            return;
-        if (map.get("status").toString().equals("10")) {
-            Map<String,Object> order = indexMapper.queryOrderFromMQ(map.get("id").toString());
-            if (order == null)
+    public void cancelOrder(Map<String, Object> map, Message message, Channel channel) throws IOException {
+        try {
+            if (map == null) {
+                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                 return;
-            indexMapper.cancelOrderLog(new HashMap<>(){
-                {
-                    put("id",map.get("id").toString());
-                    put("status",12);
-                }
-            });
-            indexMapper.cancelOrder(order.get("orderid").toString());
-            UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
-            BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
-            indexMapper.updateUserZLMoney(new HashMap<>(){
-                {
-                    put("userId",order.get("enemyid"));
-                    put("zlmoney",userMoney.getYtl_money().add(userMoney.getCold_ytl().compareTo(needCount) < 0 ? userMoney.getCold_ytl() : needCount).setScale(6,RoundingMode.HALF_DOWN));
-                    put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(6,RoundingMode.HALF_DOWN));
-                }
-            });
-            updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()),needCount.doubleValue(),0,"O2C自动撤单返回");
-            String key = "O2C_USER_CANCEL_" + order.get("userid").toString() + QueryTime.queryToday();
-            String val = RedisUtilsEx.get(key);
-            if (StringUtils.isEmpty(val))
-                RedisUtilsEx.set(key,"1",Time.DAY.getSec());
-            else {
-                int c = Integer.parseInt(val) + 1;
-                RedisUtilsEx.set(key,String.valueOf(c),Time.DAY.getSec());
-                if (c >= 2)
-                    RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("userid").toString(),"1",Time.ONEYEAR.getSec());
             }
-        } else if (map.get("status").toString().equals("15")){
-            Map<String,Object> order = indexMapper.queryOrderFromMQ15(map.get("id").toString());
-            if (order == null)
-                return;
-            UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
-            BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
-            indexMapper.updateUserZLMoney(new HashMap<>(){
-                {
-                    put("userId",order.get("enemyid"));
-                    put("zlmoney",userMoney.getYtl_money());
-                    put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(6,RoundingMode.HALF_DOWN));
-                }
-            });
-            updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()),needCount.doubleValue(),1,"O2C市场寄售");
-            UserMoney _userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("userid").toString()));
-            indexMapper.updateUserZLMoney(new HashMap<>(){
-                {
-                    put("userId",order.get("userid"));
-                    put("zlmoney",_userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(6,RoundingMode.HALF_DOWN));
-                    put("coldzlmoney",_userMoney.getCold_ytl());
-                }
-            });
-            indexMapper.updateOrderStatusEND(new HashMap<>(){
-                {
-                    put("id",map.get("id").toString());
-                    put("status",19);
-                    put("old",15);
-                }
-            });
-            executorService.execute(()->{
-                String time = QueryTime.queryToday();
-                String dayTop = RedisUtilsEx.get(RedisKeys.O2C_TOP_PRICE + time);
-                if (StringUtils.isEmpty(dayTop))
-                    RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
+            if (map.get("status").toString().equals("10")) {
+                Map<String, Object> order = indexMapper.queryOrderFromMQ(map.get("id").toString());
+                if (order == null)
+                    return;
+                indexMapper.cancelOrderLog(new HashMap<>() {
+                    {
+                        put("id", map.get("id").toString());
+                        put("status", 12);
+                    }
+                });
+                indexMapper.cancelOrder(order.get("orderid").toString());
+                UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
+                BigDecimal percent = vipPercentFromMoney(userMoney);
+                BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4, RoundingMode.HALF_DOWN));
+                indexMapper.updateUserZLMoney(new HashMap<>() {
+                    {
+                        put("userId", order.get("enemyid"));
+                        put("zlmoney", userMoney.getYtl_money().add(userMoney.getCold_ytl().compareTo(needCount) < 0 ? userMoney.getCold_ytl() : needCount).setScale(4, RoundingMode.HALF_DOWN));
+                        put("coldzlmoney", userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(4, RoundingMode.HALF_DOWN));
+                    }
+                });
+                updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()), needCount.doubleValue(), 0, "O2C自动撤单返回");
+                String key = "O2C_USER_CANCEL_" + order.get("userid").toString() + QueryTime.queryToday();
+                String val = RedisUtilsEx.get(key);
+                if (StringUtils.isEmpty(val))
+                    RedisUtilsEx.set(key, "1", Time.DAY.getSec());
                 else {
-                    if (new BigDecimal(dayTop).compareTo(new BigDecimal(order.get("price").toString())) < 0)
-                        RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
+                    int c = Integer.parseInt(val) + 1;
+                    RedisUtilsEx.set(key, String.valueOf(c), Time.DAY.getSec());
+                    if (c >= 2)
+                        RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("userid").toString(), "1", Time.ONEYEAR.getSec());
                 }
-                String dayLow = RedisUtilsEx.get(RedisKeys.O2C_LOW_PRICE + time);
-                if (StringUtils.isEmpty(dayLow))
-                    RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
+            } else if (map.get("status").toString().equals("15")) {
+                Map<String, Object> order = indexMapper.queryOrderFromMQ15(map.get("id").toString());
+                if (order == null)
+                    return;
+                UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
+                BigDecimal percent = vipPercentFromMoney(userMoney);
+                BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4, RoundingMode.HALF_DOWN));
+                indexMapper.updateUserZLMoney(new HashMap<>() {
+                    {
+                        put("userId", order.get("enemyid"));
+                        put("zlmoney", userMoney.getYtl_money().subtract(new BigDecimal(10000)).setScale(4,RoundingMode.HALF_DOWN));
+                        put("coldzlmoney", userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(4, RoundingMode.HALF_DOWN));
+                    }
+                });
+                updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()), needCount.doubleValue(), 1, "O2C市场寄售");
+                UserMoney _userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("userid").toString()));
+                indexMapper.updateUserZLMoney(new HashMap<>() {
+                    {
+                        put("userId", order.get("userid"));
+                        put("zlmoney", _userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(4, RoundingMode.HALF_DOWN));
+                        put("coldzlmoney", _userMoney.getCold_ytl());
+                    }
+                });
+                indexMapper.updateOrderStatusEND(new HashMap<>() {
+                    {
+                        put("id", map.get("id").toString());
+                        put("status", 19);
+                        put("old", 15);
+                    }
+                });
+                executorService.execute(() -> {
+                    String time = QueryTime.queryToday();
+                    String dayTop = RedisUtilsEx.get(RedisKeys.O2C_TOP_PRICE + time);
+                    if (StringUtils.isEmpty(dayTop))
+                        RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    else {
+                        if (new BigDecimal(dayTop).compareTo(new BigDecimal(order.get("price").toString())) < 0)
+                            RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    }
+                    String dayLow = RedisUtilsEx.get(RedisKeys.O2C_LOW_PRICE + time);
+                    if (StringUtils.isEmpty(dayLow))
+                        RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    else {
+                        if (new BigDecimal(order.get("price").toString()).compareTo(new BigDecimal(dayLow)) < 0)
+                            RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    }
+                    String number = RedisUtilsEx.get(RedisKeys.O2C_COUNT + time);
+                    if (StringUtils.isEmpty(number))
+                        RedisUtilsEx.set(RedisKeys.O2C_COUNT + time, order.get("num").toString(), Time.MOUNTH.getSec());
+                    else
+                        RedisUtilsEx.set(RedisKeys.O2C_COUNT + time, new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4, RoundingMode.DOWN).toString(), Time.MOUNTH.getSec());
+                    RedisUtilsEx.set(RedisKeys.NOW_PRICE, order.get("price").toString(), Time.MOUNTH.getSec());
+                });
+                updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()), Double.parseDouble(order.get("num").toString()), 0, "O2C市场收购");
+            } else if (map.get("status").toString().equals("100")) {
+                Map<String, Object> order = indexMapper.queryOrderFromMQ_Sell(map.get("id").toString());
+                if (order == null)
+                    return;
+                indexMapper.cancelOrderLog(new HashMap<>() {
+                    {
+                        put("id", map.get("id").toString());
+                        put("status", 120);
+                    }
+                });
+                indexMapper.updateUserOrder(new HashMap<>() {
+                    {
+                        put("orderId", order.get("orderid").toString());
+                        put("num", order.get("num").toString());
+                    }
+                });
+                String key = "O2C_USER_CANCEL_" + order.get("enemyid").toString() + QueryTime.queryToday();
+                String val = RedisUtilsEx.get(key);
+                if (StringUtils.isEmpty(val))
+                    RedisUtilsEx.set(key, "1", Time.DAY.getSec());
                 else {
-                    if (new BigDecimal(order.get("price").toString()).compareTo(new BigDecimal(dayLow)) < 0)
-                        RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
+                    int c = Integer.parseInt(val) + 1;
+                    RedisUtilsEx.set(key, String.valueOf(c), Time.DAY.getSec());
+                    if (c >= 2)
+                        RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("enemyid").toString(), "1", Time.ONEYEAR.getSec());
                 }
-                String number = RedisUtilsEx.get(RedisKeys.O2C_COUNT + time);
-                if (StringUtils.isEmpty(number))
-                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,order.get("num").toString(),Time.MOUNTH.getSec());
-                else
-                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
-                RedisUtilsEx.set(RedisKeys.NOW_PRICE,order.get("price").toString(),Time.MOUNTH.getSec());
-            });
-            updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()),Double.parseDouble(order.get("num").toString()),0,"O2C市场收购");
-        } else if (map.get("status").toString().equals("100")) {
-            Map<String,Object> order = indexMapper.queryOrderFromMQ_Sell(map.get("id").toString());
-            if (order == null)
-                return;
-            indexMapper.cancelOrderLog(new HashMap<>(){
-                {
-                    put("id",map.get("id").toString());
-                    put("status",120);
-                }
-            });
-            indexMapper.updateUserOrder(new HashMap<>(){
-                {
-                    put("orderId",order.get("orderid").toString());
-                    put("num",order.get("num").toString());
-                }
-            });
-            String key = "O2C_USER_CANCEL_" + order.get("enemyid").toString() + QueryTime.queryToday();
-            String val = RedisUtilsEx.get(key);
-            if (StringUtils.isEmpty(val))
-                RedisUtilsEx.set(key,"1",Time.DAY.getSec());
-            else {
-                int c = Integer.parseInt(val) + 1;
-                RedisUtilsEx.set(key,String.valueOf(c),Time.DAY.getSec());
-                if (c >= 2)
-                    RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("enemyid").toString(),"1",Time.ONEYEAR.getSec());
+            } else if (map.get("status").toString().equals("150")) {
+                Map<String, Object> order = indexMapper.queryOrderFromMQ150(map.get("id").toString());
+                if (order == null)
+                    return;
+                UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("userid").toString()));
+                BigDecimal percent = vipPercentFromMoney(userMoney);
+                BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4, RoundingMode.HALF_DOWN));
+                indexMapper.updateUserZLMoney(new HashMap<>() {
+                    {
+                        put("userId", order.get("userid"));
+                        put("zlmoney", userMoney.getYtl_money().subtract(new BigDecimal(10000)).setScale(4,RoundingMode.HALF_DOWN));
+                        put("coldzlmoney", userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(4, RoundingMode.HALF_DOWN));
+                    }
+                });
+                updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()), needCount.doubleValue(), 1, "O2C市场寄售");
+                UserMoney _userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
+                indexMapper.updateUserZLMoney(new HashMap<>() {
+                    {
+                        put("userId", order.get("enemyid"));
+                        put("zlmoney", _userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(4, RoundingMode.HALF_DOWN));
+                        put("coldzlmoney", _userMoney.getCold_ytl());
+                    }
+                });
+                indexMapper.updateOrderStatusEND(new HashMap<>() {
+                    {
+                        put("id", map.get("id").toString());
+                        put("status", 190);
+                        put("old", 150);
+                    }
+                });
+                executorService.execute(() -> {
+                    String time = QueryTime.queryToday();
+                    String dayTop = RedisUtilsEx.get(RedisKeys.O2C_TOP_PRICE + time);
+                    if (StringUtils.isEmpty(dayTop))
+                        RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    else {
+                        if (new BigDecimal(dayTop).compareTo(new BigDecimal(order.get("price").toString())) < 0)
+                            RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    }
+                    String dayLow = RedisUtilsEx.get(RedisKeys.O2C_LOW_PRICE + time);
+                    if (StringUtils.isEmpty(dayLow))
+                        RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    else {
+                        if (new BigDecimal(order.get("price").toString()).compareTo(new BigDecimal(dayLow)) < 0)
+                            RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time, order.get("price").toString(), Time.TWODAY.getSec());
+                    }
+                    String number = RedisUtilsEx.get(RedisKeys.O2C_COUNT + time);
+                    if (StringUtils.isEmpty(number))
+                        RedisUtilsEx.set(RedisKeys.O2C_COUNT + time, order.get("num").toString(), Time.MOUNTH.getSec());
+                    else
+                        RedisUtilsEx.set(RedisKeys.O2C_COUNT + time, new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4, RoundingMode.DOWN).toString(), Time.MOUNTH.getSec());
+                    RedisUtilsEx.set(RedisKeys.NOW_PRICE, order.get("price").toString(), Time.MOUNTH.getSec());
+                });
+                updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()), Double.parseDouble(order.get("num").toString()), 0, "O2C市场收购");
             }
-        } else if (map.get("status").toString().equals("150")) {
-            Map<String,Object> order = indexMapper.queryOrderFromMQ150(map.get("id").toString());
-            if (order == null)
-                return;
-            UserMoney userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("userid").toString()));
-            BigDecimal percent = vipPercentFromMoney(userMoney);
-            BigDecimal needCount = new BigDecimal(order.get("num").toString()).multiply(BigDecimal.ONE.add(BigDecimal.ONE.subtract(percent)).setScale(4,RoundingMode.HALF_DOWN));
-            indexMapper.updateUserZLMoney(new HashMap<>(){
-                {
-                    put("userId",order.get("userid"));
-                    put("zlmoney",userMoney.getYtl_money());
-                    put("coldzlmoney",userMoney.getCold_ytl().compareTo(needCount) < 0 ? 0 : userMoney.getCold_ytl().subtract(needCount).setScale(6,RoundingMode.HALF_DOWN));
-                }
-            });
-            updateZLMoneyLOG(Integer.parseInt(order.get("userid").toString()),needCount.doubleValue(),1,"O2C市场寄售");
-            UserMoney _userMoney = indexMapper.queryUserMoney(Integer.parseInt(order.get("enemyid").toString()));
-            indexMapper.updateUserZLMoney(new HashMap<>(){
-                {
-                    put("userId",order.get("enemyid"));
-                    put("zlmoney",_userMoney.getYtl_money().add(new BigDecimal(order.get("num").toString())).setScale(6,RoundingMode.HALF_DOWN));
-                    put("coldzlmoney",_userMoney.getCold_ytl());
-                }
-            });
-            indexMapper.updateOrderStatusEND(new HashMap<>(){
-                {
-                    put("id",map.get("id").toString());
-                    put("status",190);
-                    put("old",150);
-                }
-            });
-            executorService.execute(()->{
-                String time = QueryTime.queryToday();
-                String dayTop = RedisUtilsEx.get(RedisKeys.O2C_TOP_PRICE + time);
-                if (StringUtils.isEmpty(dayTop))
-                    RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
-                else {
-                    if (new BigDecimal(dayTop).compareTo(new BigDecimal(order.get("price").toString())) < 0)
-                        RedisUtilsEx.set(RedisKeys.O2C_TOP_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
-                }
-                String dayLow = RedisUtilsEx.get(RedisKeys.O2C_LOW_PRICE + time);
-                if (StringUtils.isEmpty(dayLow))
-                    RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
-                else {
-                    if (new BigDecimal(order.get("price").toString()).compareTo(new BigDecimal(dayLow)) < 0)
-                        RedisUtilsEx.set(RedisKeys.O2C_LOW_PRICE + time,order.get("price").toString(),Time.TWODAY.getSec());
-                }
-                String number = RedisUtilsEx.get(RedisKeys.O2C_COUNT + time);
-                if (StringUtils.isEmpty(number))
-                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,order.get("num").toString(),Time.MOUNTH.getSec());
-                else
-                    RedisUtilsEx.set(RedisKeys.O2C_COUNT + time,new BigDecimal(order.get("num").toString()).add(new BigDecimal(number)).setScale(4,RoundingMode.DOWN).toString(),Time.MOUNTH.getSec());
-                RedisUtilsEx.set(RedisKeys.NOW_PRICE,order.get("price").toString(),Time.MOUNTH.getSec());
-            });
-            updateZLMoneyLOG(Integer.parseInt(order.get("enemyid").toString()),Double.parseDouble(order.get("num").toString()),0,"O2C市场收购");
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+        } catch (Exception e) {
+            e.printStackTrace();
+            channel.basicNack(message.getMessageProperties().getDeliveryTag(),false,true);
         }
     }
 
@@ -546,8 +557,8 @@ public class IndexService extends CommonService{
         indexMapper.updateUserZLMoney(new HashMap<>(){
             {
                 put("userId",user.getUserId());
-                put("zlmoney",userMoney.getYtl_money().add(re).setScale(6,RoundingMode.HALF_DOWN));
-                put("coldzlmoney",userMoney.getCold_ytl().subtract(re).setScale(6,RoundingMode.HALF_DOWN));
+                put("zlmoney",userMoney.getYtl_money().add(re).setScale(4,RoundingMode.HALF_DOWN));
+                put("coldzlmoney",userMoney.getCold_ytl().subtract(re).setScale(4,RoundingMode.HALF_DOWN));
             }
         });
         updateZLMoneyLOG(user.getUserId(),re.doubleValue(),0,"撤单返回");
@@ -584,7 +595,7 @@ public class IndexService extends CommonService{
                 put("id",orderId);
                 put("status",15);
             }
-        }),"7200000");
+        }),"43200000");
         return Result.OK.setMsg("确认成功").setData(null);
     }
 
@@ -610,7 +621,7 @@ public class IndexService extends CommonService{
                 put("id",orderId);
                 put("status",150);
             }
-        }),"7200000");
+        }),"3600000");
         RedisUtilsEx.set("ORDER_NEED_" + order.get("userid"),"1",Time.THREEHOUR.getSec());
         RedisUtilsEx.set("ORDER_NEED_" + order.get("enemyid"),"1",Time.THREEHOUR.getSec());
         return Result.OK.setMsg("确认成功").setData(null);

@@ -75,9 +75,8 @@ public class Receiver {
      */
     @RabbitListener(queues = {"REDIRECT_QUEUE"})
     public void redirect(Message message, Channel channel) throws IOException {
-        channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         log.info("dead message 2 hours 后 消费消息 {}",new String (message.getBody()));
         Map map = JSONObject.parseObject(new String(message.getBody()),Map.class);
-        indexService.cancelOrder(map);
+        indexService.cancelOrder(map,message,channel);
     }
 }
