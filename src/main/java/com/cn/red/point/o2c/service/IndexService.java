@@ -1107,5 +1107,19 @@ public class IndexService extends CommonService{
         }
     }
 
+    public int queryAliAndReal(int userId,int status){
+        Map<String, Object> stringObjectMap = indexMapper.queryAli(userId);
+        if(status == 1){
+            if(StringUtils.isEmpty(stringObjectMap.get("otc_pwd").toString())){
+                return 1;
+            }
+        }else{
+            if(StringUtils.isEmpty(stringObjectMap.get("card").toString())){
+                return 1;
+            }
+        }
+        return 0;
+    }
+
 
 }

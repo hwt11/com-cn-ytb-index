@@ -1022,4 +1022,13 @@
         WHERE
         user_id = #{userId}
     </update>
+    <select id="queryAli" resultType="map" parameterType="int">
+        select
+        IFNULL(otc_pwd,'') as otc_pwd,
+        IFNULL(card,'') as card
+        from
+        ytb_user
+        where
+        user_id = #{userId}
+    </select>
 </mapper>

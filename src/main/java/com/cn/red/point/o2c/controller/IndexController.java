@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.text.ParseException;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "o2c", method = RequestMethod.POST, produces = "application/json;charset=UTF-8")
@@ -76,27 +78,23 @@ public class IndexController extends Action {
         return ajaxQuery(new QueryCmd() {
             @Override
             public Object query(User user) {
-                if(StringUtils.isEmpty(user.getAliQrCode())){
-
-                    return Result.NO_ALI.setMsg("请先上传支付宝二维码").setData("");
-                }
-                String s = RedisUtilsEx.get("user_prohibit_" + user.getUserId());
-                if(StringUtils.isNotEmpty(s)){
-                    Integer dt = Integer.parseInt(s) ;
-                    if (dt < 60) {
-                        s = dt + "分钟";
-                        return Result.NO_PROHIBIT.setMsg("您已被限制交易").setData(s);
+                Map<String,Object> map = new HashMap<>();
+                map.put("aliStatus",1);
+                map.put("cardStatus",1);
+                if(StringUtils.isEmpty(user.getOtcPwd())){
+                    int i = indexService.queryAliAndReal(user.getUserId(), 1);
+                    if(i == 1){
+                        map.put("aliStatus",0);
                     }
-                    int hour = Math.round(dt / 120);
-                    int minute = Math.round(dt - (hour * 120));
-                    s = hour + "小时" + (minute == 0 ? "" : minute + "分钟");
 
-                    return Result.NO_PROHIBIT.setMsg("您已被限制交易").setData(s);
                 }
-                //TODO 差实名认证查询 返回状态根据前端定义
-
-
-                return Result.OK.setMsg("success").setData("");
+                if(StringUtils.isEmpty(user.getCard()) || StringUtils.isEmpty(user.getRealName())) {
+                    int i = indexService.queryAliAndReal(user.getUserId(), 2);
+                    if(i == 1){
+                        map.put("cardStatus", 0);
+                    }
+                }
+                return Result.OK.setMsg("success").setData(map);
             }
         },token,request);
     }

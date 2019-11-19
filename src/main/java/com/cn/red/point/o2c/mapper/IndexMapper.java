@@ -64,4 +64,5 @@ public interface IndexMapper {
     int addAliUrl(@Param("userId")String userId,@Param("aliUrl")String aliUrl);
     int updateUserAli(Map<String,Object> map);
     int queryOrderIngCount(int userId);
+    Map<String,Object> queryAli(int userId);
 }
