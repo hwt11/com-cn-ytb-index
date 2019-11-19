@@ -2,7 +2,6 @@ package com.cn.red.point.o2c.controller;
 
 import com.cn.red.point.common.Action;
 import com.cn.red.point.common.QueryCmd;
-import com.cn.red.point.common.QueryTime;
 import com.cn.red.point.common.StringUtils;
 import com.cn.red.point.common.enity.Result;
 import com.cn.red.point.common.enity.User;
@@ -17,9 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 
 @RestController
 @RequestMapping(value = "o2c", method = RequestMethod.POST, produces = "application/json;charset=UTF-8")
@@ -28,16 +24,16 @@ public class IndexController extends Action {
     @Autowired
     private IndexService indexService;
 
-//    @RequestMapping("alipay")
-//    public String alipay(HttpServletRequest request,
-//                         @RequestParam(value = "token") String token) {
-//        return ajaxQuery(new QueryCmd() {
-//            @Override
-//            public Object query(User user) {
-//                return indexService.queryUserAliPay(user);
-//            }
-//        },token,request);
-//    }
+    @RequestMapping("alipay")
+    public String alipay(HttpServletRequest request,
+                         @RequestParam(value = "token") String token) {
+        return ajaxQuery(new QueryCmd() {
+            @Override
+            public Object query(User user) {
+                return indexService.queryUserAliPay(user);
+            }
+        },token,request);
+    }
 
 
     @RequestMapping("commitAliPay")

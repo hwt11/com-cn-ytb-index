@@ -38,14 +38,7 @@ public class IndexService extends CommonService{
     public Result queryUserAliPay(User user) {
         if (StringUtils.isNotEmpty(RedisUtilsEx.get(RedisKeys.USER_O2C + user.getUserId())))
             return Result.ERROR.setMsg("您的O2C账户被停用").setData(null);
-        Map<String,Object> map = indexMapper.queryUserAliPay(user.getUserId());
-        if (map == null)
-            return Result.ERROR.setMsg("您尚未在O2C中认证支付宝").setData(null);
-        if (map.get("type").toString().equals("1")) {
-            RedisUtilsEx.set(RedisKeys.USER_O2C + user.getUserId(),"1", Time.ONEYEAR.getSec());
-            return Result.ERROR.setMsg("您的O2C账户被停用").setData(null);
-        }
-        return Result.OK.setMsg("success").setData(map);
+        return Result.OK.setMsg("success").setData(null);
     }
 
     public Result commitAliPay(User user,String image,String pwd){
@@ -123,6 +116,13 @@ public class IndexService extends CommonService{
             }
         }
         return num;
+    }
+
+    public boolean queryOrderCount(int userId) {
+        int count = indexMapper.queryOrderIngCount(userId);
+        if (count < 3)
+            return false;
+        return true;
     }
 
     private static final BigDecimal MAX = new BigDecimal(1000000);
@@ -225,6 +225,8 @@ public class IndexService extends CommonService{
             return Result.ERROR.setMsg("最低数量1000个").setData(null);
         if (count > 10000000)
             return Result.ERROR.setMsg("最高数量10000000个").setData(null);
+        if (queryOrderCount(user.getUserId()))
+            return Result.ERROR.setMsg("订单数量超过3个").setData(null);
         Map<String,Object> alipay = indexMapper.queryUserAliPay(user.getUserId());
         UserMoney userMoney = indexMapper.queryUserMoney(user.getUserId());
         BigDecimal needCount = new BigDecimal(count);
@@ -292,6 +294,8 @@ public class IndexService extends CommonService{
             return Result.ERROR.setMsg("您的O2C账户被停用").setData(null);
         if (count < 100)
             return Result.ERROR.setMsg("最低数量100个").setData(null);
+        if (queryOrderCount(user.getUserId()))
+            return Result.ERROR.setMsg("订单数量超过3个").setData(null);
         Map<String,Object> order = indexMapper.querySellOrder(orderId);
         if(judgeNum(order.get("userid").toString())){
             return Result.ERROR.setMsg("该卖家当日已无法完成交易").setData("");
@@ -377,7 +381,7 @@ public class IndexService extends CommonService{
                     int c = Integer.parseInt(val) + 1;
                     RedisUtilsEx.set(key, String.valueOf(c), Time.DAY.getSec());
                     if (c >= 2)
-                        RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("userid").toString(), "1", Time.ONEYEAR.getSec());
+                        RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("userid").toString(), "1", Time.THREEDAY.getSec());
                 }
             } else if (map.get("status").toString().equals("15")) {
                 Map<String, Object> order = indexMapper.queryOrderFromMQ15(map.get("id").toString());
@@ -457,7 +461,7 @@ public class IndexService extends CommonService{
                     int c = Integer.parseInt(val) + 1;
                     RedisUtilsEx.set(key, String.valueOf(c), Time.DAY.getSec());
                     if (c >= 2)
-                        RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("enemyid").toString(), "1", Time.ONEYEAR.getSec());
+                        RedisUtilsEx.set(RedisKeys.USER_O2C + order.get("enemyid").toString(), "1", Time.THREEDAY.getSec());
                 }
             } else if (map.get("status").toString().equals("150")) {
                 Map<String, Object> order = indexMapper.queryOrderFromMQ150(map.get("id").toString());
